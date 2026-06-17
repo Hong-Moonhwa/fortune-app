@@ -1,65 +1,114 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import SetupForm from '@/components/SetupForm';
+import FortuneDisplay from '@/components/FortuneDisplay';
+
+const STORAGE_KEY = 'fortune_user_data';
 
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+  const [screen, setScreen] = useState('loading');
+  const [userData, setUserData] = useState(null);
+  const [fortune, setFortune] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setUserData(parsed);
+        fetchFortune(parsed);
+      } else {
+        setScreen('setup');
+      }
+    } catch {
+      setScreen('setup');
+    }
+  }, []);
+
+  async function fetchFortune(data) {
+    setScreen('loading');
+    setError(null);
+    try {
+      const res = await fetch('/api/fortune', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || '운세 생성 실패');
+      setFortune(json);
+      setScreen('fortune');
+    } catch (err) {
+      setError(err.message);
+      setScreen('error');
+    }
+  }
+
+  function handleSetupSubmit(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    setUserData(data);
+    fetchFortune(data);
+  }
+
+  function handleReset() {
+    localStorage.removeItem(STORAGE_KEY);
+    setUserData(null);
+    setFortune(null);
+    setError(null);
+    setScreen('setup');
+  }
+
+  if (screen === 'loading') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <div className="relative w-16 h-16">
+          <div className="w-16 h-16 rounded-full border-4 border-purple-900 border-t-purple-400 animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center text-2xl">🔮</div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <p className="text-purple-300 text-sm animate-pulse">운세를 분석하는 중...</p>
+      </div>
+    );
+  }
+
+  if (screen === 'error') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-4">
+        <div className="text-4xl">😞</div>
+        <p className="text-white font-semibold">운세 생성에 실패했습니다</p>
+        <p className="text-gray-400 text-sm text-center max-w-xs">{error}</p>
+        {(error?.includes('API') || error?.includes('401') || error?.includes('key')) && (
+          <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-xl p-4 max-w-sm text-sm text-yellow-200">
+            <p className="font-semibold mb-1">⚠️ API 키 설정 필요</p>
+            <p><code className="bg-black/30 px-1 rounded">.env.local</code> 파일에 <code className="bg-black/30 px-1 rounded">ANTHROPIC_API_KEY</code>를 설정해 주세요.</p>
+          </div>
+        )}
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={() => fetchFortune(userData)}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm transition-all"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            다시 시도
+          </button>
+          <button
+            onClick={handleReset}
+            className="px-4 py-2 border border-white/10 text-gray-300 rounded-xl text-sm hover:bg-white/5 transition-all"
           >
-            Documentation
-          </a>
+            처음으로
+          </button>
         </div>
-      </main>
-    </div>
-  );
+      </div>
+    );
+  }
+
+  if (screen === 'setup') {
+    return <SetupForm onSubmit={handleSetupSubmit} />;
+  }
+
+  if (screen === 'fortune' && fortune) {
+    return <FortuneDisplay userData={userData} fortune={fortune} onReset={handleReset} />;
+  }
+
+  return null;
 }
