@@ -2,9 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { calculateFourPillars } from '@/lib/saju';
 import { MBTI_DATA } from '@/lib/mbti';
 
-const client = new Anthropic({
-  defaultHeaders: { 'anthropic-beta': 'oauth-2025-04-20' },
-});
+const client = new Anthropic();
 
 export async function POST(request) {
   try {
