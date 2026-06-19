@@ -1,10 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { calculateFourPillars } from '@/lib/saju';
 import { MBTI_DATA } from '@/lib/mbti';
 
-const client = new Anthropic({
-  defaultHeaders: { 'anthropic-beta': 'oauth-2025-04-20' },
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export async function POST(request) {
   try {
@@ -58,13 +56,9 @@ MBTI 성향 70%, 사주명리학 30%를 반영해 오늘의 운세를 생성하�
   "guide": "<오늘 하루 종합 가이드 2~3문장>"
 }`;
 
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1500,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const text = response.content[0].text.trim();
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const response = await model.generateContent(prompt);
+    const text = response.response.text().trim();
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return Response.json({ error: '운세 생성에 실패했습니다.' }, { status: 500 });
